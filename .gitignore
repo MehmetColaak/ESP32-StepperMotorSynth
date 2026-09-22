@@ -17,6 +17,7 @@ cmake-build-*/
 # OS junk
 .DS_Store
 Thumbs.db
+misc/
 
 # Python virtualenvs
 venv/
