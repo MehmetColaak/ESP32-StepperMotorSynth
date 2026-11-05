@@ -1,0 +1,16 @@
+// Onboard LED blink test
+//
+// Build/upload:  pio run -e test-led -t upload
+
+#include <Arduino.h>
+
+void setup() {
+  pinMode(LED_BUILTIN, OUTPUT);
+}
+
+void loop() {
+  digitalWrite(LED_BUILTIN, HIGH);
+  delay(500);
+  digitalWrite(LED_BUILTIN, LOW);
+  delay(500);
+}

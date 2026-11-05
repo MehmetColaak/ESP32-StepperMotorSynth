@@ -1,27 +1,27 @@
-// ESP32-S3 MIDI Stepper Motor Synth — 7 motors, 7 MIDI channels
+// ESP32-S3 MIDI Stepper Motor Synth — 5 motors, 5 MIDI channels
 // Inspired by jzkmath/Arduino-MIDI-Stepper-Motor-Instrument
 //
-// MIDI channel 1..7  ->  motor/voice 0..6
+// MIDI channel 1..5  ->  motor/voice 0..4
 // Note On / Note Off / Pitch Bend / CC120+123 (all sound/notes off)
 // Raw MIDI bytes arrive over USB-CDC serial from Max/MSP.
 //
 // Voices 0..3: LEDC channels 0,2,4,6 (one per LEDC hardware timer)
-// Voices 4..6: MCPWM unit 0, timers 0..2, output A
+// Voice 4:     MCPWM unit 0, timer 0, output A
 
 #include <Arduino.h>
 #include "driver/mcpwm.h"
 
 // ---------------- Pin map ----------------
-static const int STEP_PINS[7] = {4, 5, 6, 7, 15, 16, 17};
-static const int PIN_ENABLE = 18; // A4988 EN, active LOW
+static const int STEP_PINS[5] = {4, 5, 6, 7, 15};
+static const int DIR_PINS[5] = {16, 17, 18, 8, 3};
+// A4988 EN is not wired: the drivers are always enabled.
 
 static const uint8_t LEDC_CH[4] = {0, 2, 4, 6};
-static const mcpwm_timer_t MC_TIMER[3] = {MCPWM_TIMER_0, MCPWM_TIMER_1,
-                                          MCPWM_TIMER_2};
-static const mcpwm_io_signals_t MC_IO[3] = {MCPWM0A, MCPWM1A, MCPWM2A};
+static const mcpwm_timer_t MC_TIMER[1] = {MCPWM_TIMER_0};
+static const mcpwm_io_signals_t MC_IO[1] = {MCPWM0A};
 
 // ---------------- Voice state ----------------
-static const int NUM_VOICES = 7;
+static const int NUM_VOICES = 5;
 static const float BEND_RANGE = 2.0f; // semitones, +/-
 
 struct Voice {
@@ -157,8 +157,10 @@ static void parseMidiByte(uint8_t b) {
 void setup() {
   Serial.begin(115200); // baud ignored on USB-CDC, kept for compatibility
 
-  pinMode(PIN_ENABLE, OUTPUT);
-  digitalWrite(PIN_ENABLE, HIGH); // drivers off during init
+  for (int v = 0; v < NUM_VOICES; v++) {
+    pinMode(DIR_PINS[v], OUTPUT);
+    digitalWrite(DIR_PINS[v], LOW); // direction doesn't matter for pitch
+  }
 
   for (int v = 0; v < 4; v++) {
     ledcSetup(LEDC_CH[v], 1000, 10);
@@ -172,15 +174,13 @@ void setup() {
   cfg.cmpr_b = 0;
   cfg.duty_mode = MCPWM_DUTY_MODE_0;
   cfg.counter_mode = MCPWM_UP_COUNTER;
-  for (int i = 0; i < 3; i++) {
+  for (int i = 0; i < 1; i++) {
     mcpwm_gpio_init(MCPWM_UNIT_0, MC_IO[i], STEP_PINS[4 + i]);
     mcpwm_init(MCPWM_UNIT_0, MC_TIMER[i], &cfg);
     mcpwm_set_signal_low(MCPWM_UNIT_0, MC_TIMER[i], MCPWM_OPR_A);
   }
 
   allSilent();
-  delay(200);
-  digitalWrite(PIN_ENABLE, LOW); // enable drivers, idle (no step pulses)
 }
 
 void loop() {
