@@ -22,3 +22,7 @@ misc/
 # Python virtualenvs
 venv/
 .venv/
+
+# Claude Code / session reports
+CLAUDE.md
+.claude/
